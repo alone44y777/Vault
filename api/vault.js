@@ -11,9 +11,9 @@ export default async function handler(req) {
 
   // Tumhari Custom Branding (Har response mein aayegi)
   const meta = {
-    "System Owner": "*⎯⎯꯭፝𝆭𝐒𝝰꯭᪳̐ɤ፝֟͝𝙳꯭𝝰꯭֟ؖ۬ɤ꯭ 𝙳꯭֟֗֯፝⃑⃐𝝰꯭ꭎ꯭҄𝙳 𝆅ᗩ꯭ɤ꯭፝𝝰𝆭𝝸꯭𝝶꯭⎯꯭⃰❀* 🌚💀",
-    "PowerBy": "*ꠋꠋ𓆩꯭𝆅𝐃꯭𝝰꯭᪳᪰̑ɤ꯭꯭ꠋ𝆅𝐊 𝝴꯭᪳̐ϻ꯭፝֟͝𝗽𝆭𝝸꯭ɤ𝆅𝝴꯭𓂃꯭𝆬𝆬𝆬𝆬𝆬𝆬𝆬𖢷𓆪",
-    "Code By": "Empire Tech Zone"
+    "System Owner": "✘ 𝗦𝗮𝗿𝗗𝗮𝗿 𝗗𝗮𝘂𝗗 𝗔𝗿𝗮𝗶𝗡 ✘🌚💀",
+    "PowerBy": "*ꠋꠋ𝗗𝗔𝗥𝗞-𝗘𝗠𝗣𝗜𝗥𝗘✘𓆪",
+    "Code By": "✘𝐄mp𝗜𝐑𝕰 Tech 𝗭o𝗡e✘"
   };
 
   if (req.method === 'OPTIONS') {
