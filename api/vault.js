@@ -96,7 +96,7 @@ export default async function handler(req) {
         return new Response(JSON.stringify({
           success: true,
           welcome: "Welcome to Empire Zero Trace Vault API",
-          security: "Hold-to-Read + Anti-Screenshot Shield + 13s Auto-Burn",
+          security: "Hold-to-Read + Anti-Screenshot Shield + 25s Auto-Burn",
           meta
         }), { status: 200, headers: jsonHeaders });
       }
@@ -396,6 +396,25 @@ function renderSecretPage(vaultId) {
       display: block;
       pointer-events: none;
     }
+
+    /* Thank You Note Box */
+    .thanks-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(255, 46, 136, 0.12), rgba(255, 123, 84, 0.08));
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 13px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+    .thanks-box strong {
+      display: block;
+      font-size: 14px;
+      color: #ffffff;
+      margin-bottom: 3px;
+    }
+
     .brand {
       margin-top: 18px;
       padding-top: 14px;
@@ -417,7 +436,7 @@ function renderSecretPage(vaultId) {
     <div id="sealed">
       <div class="envelope">💌</div>
       <h1>You received a secret note</h1>
-      <p class="sub">Protected by Anti-Screenshot Shield.<br/>You will have <b>13 seconds</b> to read it before it vanishes forever.</p>
+      <p class="sub">Protected by Anti-Screenshot Shield.<br/>You will have <b>25 seconds</b> to read it before it vanishes forever.</p>
       <button class="btn" id="unlockBtn" onclick="openSecret()">🔓 Unlock & Read Secret</button>
     </div>
 
@@ -472,26 +491,30 @@ function renderSecretPage(vaultId) {
       if (burnTimer) clearInterval(burnTimer);
       const result = document.getElementById('result');
       result.innerHTML =
-        '<div style="padding:12px 0;">' +
+        '<div style="padding:10px 0;">' +
           '<div style="font-size:44px;">💨</div>' +
           '<h1 style="margin-top:8px;">Message Vaporized</h1>' +
-          '<p class="sub">' + esc(reasonText) + '</p>' +
+          '<p class="sub" style="margin-bottom:14px;">' + esc(reasonText) + '</p>' +
+          '<div class="thanks-box">' +
+            '<strong>✨ Thanks for using our service!</strong>' +
+            'We hope you loved this private &amp; secure experience. Stay safe and come back anytime!' +
+          '</div>' +
           brandFooter() +
         '</div>';
     }
 
-    function start13SecTimer() {
-      let timeLeft = 13;
+    function start25SecTimer() {
+      let timeLeft = 25;
       const pill = document.getElementById('timerPill');
       const bar = document.getElementById('progressFill');
 
       burnTimer = setInterval(() => {
         timeLeft--;
         if (pill) pill.innerText = '🔥 ' + timeLeft + 's';
-        if (bar) bar.style.width = ((timeLeft / 13) * 100) + '%';
+        if (bar) bar.style.width = ((timeLeft / 25) * 100) + '%';
 
         if (timeLeft <= 0) {
-          destroyScreenNow('13 seconds are up! This secret has been permanently erased.');
+          destroyScreenNow('25 seconds are up! This secret has been permanently erased.');
         }
       }, 1000);
     }
@@ -501,7 +524,6 @@ function renderSecretPage(vaultId) {
       if (!zone) return;
 
       const reveal = (e) => {
-        // Block 2-finger or 3-finger screenshot gestures immediately
         if (e.touches && e.touches.length > 1) {
           forceBlackout();
           return;
@@ -545,7 +567,7 @@ function renderSecretPage(vaultId) {
         result.innerHTML =
           '<div class="timer-row">' +
             '<span class="badge">🛡️ Privacy Shield Active</span>' +
-            '<span class="timer-pill" id="timerPill">🔥 13s</span>' +
+            '<span class="timer-pill" id="timerPill">🔥 25s</span>' +
           '</div>' +
           '<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>' +
           '<div class="vault-zone" id="vaultZone">' +
@@ -559,7 +581,7 @@ function renderSecretPage(vaultId) {
           brandFooter(data.meta);
 
         attachHoldEvents();
-        start13SecTimer();
+        start25SecTimer();
       } catch (e) {
         sealed.classList.add('hidden');
         result.classList.remove('hidden');
