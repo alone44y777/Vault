@@ -4,7 +4,10 @@ export default async function handler(req) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   };
 
   const jsonHeaders = {
@@ -51,7 +54,7 @@ export default async function handler(req) {
   }
 
   try {
-    // 1. POST -> Save & Lock Message (Used by your separate Web)
+    // 1. POST -> Save & Lock Message
     if (req.method === 'POST') {
       const body = await req.json().catch(() => ({}));
       const message = typeof body.message === 'string' ? body.message.trim() : '';
@@ -84,22 +87,20 @@ export default async function handler(req) {
       }), { status: 200, headers: jsonHeaders });
     }
 
-    // 2. GET -> Welcome OR Beautiful Web View OR Unlock JSON
+    // 2. GET -> Status OR Secure Reader Page OR Unlock JSON
     if (req.method === 'GET') {
       const id = (url.searchParams.get('id') || '').trim();
       const unlock = url.searchParams.get('unlock') === 'true';
 
-      // No ID -> API Status JSON
       if (!id) {
         return new Response(JSON.stringify({
           success: true,
           welcome: "Welcome to Empire Zero Trace Vault API",
-          usage: "POST { message, image } to lock; Open ?id=VAULT_ID in browser to read",
+          security: "Hold-to-Read + Anti-Screenshot Shield + 13s Auto-Burn",
           meta
         }), { status: 200, headers: jsonHeaders });
       }
 
-      // If user clicked "Unlock" button (or external app requested ?unlock=true) -> Read & Destroy
       if (unlock) {
         const key = 'vault:' + id;
         const raw = await redis('GET', key);
@@ -124,13 +125,13 @@ export default async function handler(req) {
         }), { status: 200, headers: jsonHeaders });
       }
 
-      // Normal Browser Visit (?id=XYZ) -> Serve Beautiful HTML/CSS Reader Page (Does NOT delete yet!)
       const html = renderSecretPage(id);
       return new Response(html, {
         status: 200,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'text/html; charset=utf-8'
+          'Content-Type': 'text/html; charset=utf-8',
+          'X-Robots-Tag': 'noindex, nofollow'
         }
       });
     }
@@ -154,7 +155,7 @@ function renderSecretPage(vaultId) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Secret Note 💌</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -165,12 +166,18 @@ function renderSecretPage(vaultId) {
       --accent2: #ff7b54;
       --glow: rgba(255, 46, 136, 0.32);
       --bg: #07060b;
-      --card: rgba(20, 18, 32, 0.82);
-      --border: rgba(255, 255, 255, 0.13);
+      --card: rgba(20, 18, 32, 0.85);
+      --border: rgba(255, 255, 255, 0.14);
       --text: #f8fafc;
       --muted: #9ca3af;
     }
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     body {
       margin: 0;
       min-height: 100vh;
@@ -187,7 +194,7 @@ function renderSecretPage(vaultId) {
       position: fixed;
       border-radius: 50%;
       filter: blur(85px);
-      opacity: 0.45;
+      opacity: 0.42;
       z-index: 0;
       pointer-events: none;
     }
@@ -204,12 +211,12 @@ function renderSecretPage(vaultId) {
       padding: 28px 22px;
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 35px -12px var(--glow);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65), 0 0 35px -12px var(--glow);
       text-align: center;
-      animation: fadeUp 0.45s ease;
+      animation: fadeUp 0.4s ease;
     }
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(14px); }
       to { opacity: 1; transform: translateY(0); }
     }
     .envelope {
@@ -255,34 +262,110 @@ function renderSecretPage(vaultId) {
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 10px 26px -6px var(--glow);
-      transition: transform 0.18s ease, opacity 0.2s;
+      transition: transform 0.15s ease, opacity 0.2s;
     }
-    .btn:hover { transform: translateY(-2px); opacity: 0.95; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .letter {
-      text-align: left;
-      background: linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02));
-      border: 1px solid rgba(255,255,255,0.16);
-      border-radius: 20px;
-      padding: 24px 20px;
-      animation: fadeUp 0.45s ease;
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Timer Header */
+    .timer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
     }
     .badge {
-      display: inline-block;
       font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.7px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
       text-transform: uppercase;
       color: var(--accent);
       background: rgba(255,255,255,0.06);
       padding: 5px 11px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.1);
-      margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
     }
+    .timer-pill {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ff6b81;
+      background: rgba(255, 71, 87, 0.16);
+      border: 1px solid rgba(255, 71, 87, 0.45);
+      padding: 4px 11px;
+      border-radius: 999px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s linear;
+    }
+
+    /* Privacy Protected Hold-to-Read Vault */
+    .vault-zone {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #040407;
+      border: 1px solid rgba(255,255,255,0.16);
+      min-height: 170px;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .secret-inner {
+      padding: 24px 20px;
+      text-align: left;
+      opacity: 0;
+      filter: blur(28px);
+      transition: opacity 0.08s ease, filter 0.08s ease;
+      pointer-events: none;
+    }
+    .vault-zone.revealed .secret-inner {
+      opacity: 1;
+      filter: blur(0);
+    }
+    .shield-overlay {
+      position: absolute;
+      inset: 0;
+      background: #040407;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      transition: opacity 0.08s ease;
+    }
+    .vault-zone.revealed .shield-overlay {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .shield-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .shield-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .shield-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
     .quote {
       font-family: 'Lora', serif;
-      font-size: 42px;
+      font-size: 40px;
       line-height: 0.6;
       color: var(--accent);
       opacity: 0.45;
@@ -299,23 +382,22 @@ function renderSecretPage(vaultId) {
       margin: 0;
     }
     .photo-frame {
-      margin-top: 18px;
-      padding: 10px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03));
-      border: 1.5px solid rgba(255,255,255,0.22);
-      box-shadow: 0 14px 36px rgba(0,0,0,0.55);
+      margin-top: 16px;
+      padding: 8px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.18);
     }
     .photo-frame img {
       width: 100%;
-      max-height: 380px;
+      max-height: 340px;
       object-fit: contain;
-      border-radius: 12px;
+      border-radius: 10px;
       display: block;
-      background: #09080f;
+      pointer-events: none;
     }
     .brand {
-      margin-top: 20px;
+      margin-top: 18px;
       padding-top: 14px;
       border-top: 1px solid rgba(255,255,255,0.1);
       text-align: center;
@@ -324,10 +406,10 @@ function renderSecretPage(vaultId) {
       line-height: 1.6;
     }
     .brand strong { color: #fff; }
-    .hidden { display: none; }
+    .hidden { display: none !important; }
   </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
   <div class="orb orb1"></div>
   <div class="orb orb2"></div>
 
@@ -335,7 +417,7 @@ function renderSecretPage(vaultId) {
     <div id="sealed">
       <div class="envelope">💌</div>
       <h1>You received a secret note</h1>
-      <p class="sub">Someone locked a private message for you.<br/>Once you open it, it will vanish forever.</p>
+      <p class="sub">Protected by Anti-Screenshot Shield.<br/>You will have <b>13 seconds</b> to read it before it vanishes forever.</p>
       <button class="btn" id="unlockBtn" onclick="openSecret()">🔓 Unlock & Read Secret</button>
     </div>
 
@@ -343,6 +425,9 @@ function renderSecretPage(vaultId) {
   </div>
 
   <script>
+    let burnTimer = null;
+    let savedMeta = null;
+
     function esc(s) {
       return String(s || '')
         .replace(/&/g, '&amp;')
@@ -352,10 +437,88 @@ function renderSecretPage(vaultId) {
     }
 
     function brandFooter(meta) {
-      const codeBy = (meta && meta["Code By"]) ? meta["Code By"] : "Empire Tech Zone";
-      const powerBy = (meta && meta["PowerBy"]) ? meta["PowerBy"] : "Dark Empire Tech";
-      const owner = (meta && meta["System Owner"]) ? meta["System Owner"] : "Sardar Daud Arain";
+      const m = meta || savedMeta;
+      const codeBy = (m && m["Code By"]) ? m["Code By"] : "Empire Tech Zone";
+      const powerBy = (m && m["PowerBy"]) ? m["PowerBy"] : "Dark Empire Tech";
+      const owner = (m && m["System Owner"]) ? m["System Owner"] : "Sardar Daud Arain";
       return '<div class="brand"><strong>' + esc(codeBy) + '</strong> • ' + esc(powerBy) + '<br/>' + esc(owner) + '</div>';
+    }
+
+    function forceBlackout() {
+      const zone = document.getElementById('vaultZone');
+      if (zone) zone.classList.remove('revealed');
+    }
+
+    // Global Anti-Screenshot & Focus Blackout Listeners
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) forceBlackout();
+    });
+    window.addEventListener('blur', forceBlackout);
+    window.addEventListener('resize', forceBlackout);
+    document.addEventListener('copy', (e) => e.preventDefault());
+    document.addEventListener('dragstart', (e) => e.preventDefault());
+    document.addEventListener('keydown', (e) => {
+      if (
+        e.key === 'PrintScreen' ||
+        (e.ctrlKey && ['s', 'p', 'u', 'c'].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+        forceBlackout();
+      }
+    });
+
+    function destroyScreenNow(reasonText) {
+      if (burnTimer) clearInterval(burnTimer);
+      const result = document.getElementById('result');
+      result.innerHTML =
+        '<div style="padding:12px 0;">' +
+          '<div style="font-size:44px;">💨</div>' +
+          '<h1 style="margin-top:8px;">Message Vaporized</h1>' +
+          '<p class="sub">' + esc(reasonText) + '</p>' +
+          brandFooter() +
+        '</div>';
+    }
+
+    function start13SecTimer() {
+      let timeLeft = 13;
+      const pill = document.getElementById('timerPill');
+      const bar = document.getElementById('progressFill');
+
+      burnTimer = setInterval(() => {
+        timeLeft--;
+        if (pill) pill.innerText = '🔥 ' + timeLeft + 's';
+        if (bar) bar.style.width = ((timeLeft / 13) * 100) + '%';
+
+        if (timeLeft <= 0) {
+          destroyScreenNow('13 seconds are up! This secret has been permanently erased.');
+        }
+      }, 1000);
+    }
+
+    function attachHoldEvents() {
+      const zone = document.getElementById('vaultZone');
+      if (!zone) return;
+
+      const reveal = (e) => {
+        // Block 2-finger or 3-finger screenshot gestures immediately
+        if (e.touches && e.touches.length > 1) {
+          forceBlackout();
+          return;
+        }
+        zone.classList.add('revealed');
+      };
+
+      zone.addEventListener('touchstart', reveal, { passive: true });
+      zone.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 1) forceBlackout();
+      }, { passive: true });
+      zone.addEventListener('touchend', forceBlackout);
+      zone.addEventListener('touchcancel', forceBlackout);
+
+      zone.addEventListener('mousedown', reveal);
+      zone.addEventListener('mouseup', forceBlackout);
+      zone.addEventListener('mouseleave', forceBlackout);
     }
 
     async function openSecret() {
@@ -363,7 +526,7 @@ function renderSecretPage(vaultId) {
       const sealed = document.getElementById('sealed');
       const result = document.getElementById('result');
       btn.disabled = true;
-      btn.innerText = '✨ Opening Secret...';
+      btn.innerText = '✨ Unlocking Vault...';
 
       try {
         const res = await fetch(window.location.pathname + '?id=${safeId}&unlock=true');
@@ -373,27 +536,34 @@ function renderSecretPage(vaultId) {
           throw new Error(data.error || 'This secret has already vanished.');
         }
 
+        savedMeta = data.meta || null;
         const msg = data.data.message ? '<span class="quote">“</span><p class="msg-text">' + esc(data.data.message) + '</p>' : '';
-        const img = data.data.image ? '<div class="photo-frame"><img src="' + data.data.image + '" alt="Secret Photo" /></div>' : '';
+        const img = data.data.image ? '<div class="photo-frame"><img src="' + data.data.image + '" alt="Secret Photo" draggable="false" /></div>' : '';
 
         sealed.classList.add('hidden');
         result.classList.remove('hidden');
         result.innerHTML =
-          '<div class="letter">' +
-            '<div class="badge">🔥 Opened Once • Now Destroyed</div>' +
-            msg + img +
-            brandFooter(data.meta) +
-          '</div>';
+          '<div class="timer-row">' +
+            '<span class="badge">🛡️ Privacy Shield Active</span>' +
+            '<span class="timer-pill" id="timerPill">🔥 13s</span>' +
+          '</div>' +
+          '<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>' +
+          '<div class="vault-zone" id="vaultZone">' +
+            '<div class="shield-overlay">' +
+              '<div class="shield-icon">👆</div>' +
+              '<div class="shield-title">Hold Screen to Read</div>' +
+              '<div class="shield-sub">Release or multi-touch blacks out instantly</div>' +
+            '</div>' +
+            '<div class="secret-inner">' + msg + img + '</div>' +
+          '</div>' +
+          brandFooter(data.meta);
+
+        attachHoldEvents();
+        start13SecTimer();
       } catch (e) {
         sealed.classList.add('hidden');
         result.classList.remove('hidden');
-        result.innerHTML =
-          '<div style="padding:10px 0;">' +
-            '<div style="font-size:44px;">💨</div>' +
-            '<h1 style="margin-top:8px;">Message Vanished</h1>' +
-            '<p class="sub">' + esc(e.message) + '</p>' +
-            brandFooter() +
-          '</div>';
+        destroyScreenNow(e.message);
       }
     }
   </script>
